@@ -1,0 +1,11 @@
+{
+  "name": "token-optimizer",
+  "owner": { "name": "mariushub" },
+  "plugins": [
+    {
+      "name": "token-optimizer",
+      "source": "./",
+      "description": "Barre au-dessus du message : score de qualité, contexte utilisé, temps restant du cache, limites 5 h et hebdo."
+    }
+  ]
+}

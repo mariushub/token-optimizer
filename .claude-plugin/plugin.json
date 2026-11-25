@@ -1,0 +1,11 @@
+{
+  "name": "token-optimizer",
+  "version": "0.1.0",
+  "description": "Barre au-dessus du message : score de qualité, contexte utilisé, temps restant du cache, limites 5 h et hebdo.",
+  "author": { "name": "mariushub", "url": "https://github.com/mariushub" },
+  "homepage": "https://github.com/mariushub/token-optimizer",
+  "repository": "https://github.com/mariushub/token-optimizer",
+  "license": "MIT",
+  "keywords": ["tokens", "context", "cache", "usage", "rate-limit"],
+  "types": "./types/index.d.ts"
+}
