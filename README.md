@@ -1,36 +1,36 @@
 # Token Optimizer
 
-Une barre au-dessus de la zone de message de Claude Code (app desktop et terminal) qui montre d'un coup d'œil où en est ta session :
+A band above the Claude Code prompt (desktop app and terminal) that shows where your session stands at a glance:
 
-| Indicateur | Ce qu'il mesure |
+| Gauge | What it measures |
 | --- | --- |
-| **qualité** | Score sur 100 : moitié part du dernier tour servie par le cache de prompt, moitié place libre dans le contexte. |
-| **contexte** | Part de la fenêtre de contexte utilisée. |
-| **cache** | Temps restant avant que le cache de prompt expire. Passé ce délai, le message suivant renvoie tout le contexte au prix fort. |
-| **5h** | Part utilisée de ta limite sur 5 heures. |
-| **semaine** | Part utilisée de ta limite sur 7 jours. |
+| **quality** | A score out of 100: half the share of the last turn served by the prompt cache, half the free room in the context window. |
+| **context** | How much of the context window is used. |
+| **cache** | Time left before the prompt cache expires. After that, your next message re-sends the whole context at full price. |
+| **5h** | How much of your 5-hour usage limit is used. |
+| **week** | How much of your 7-day usage limit is used. |
 
-Chaque indicateur a un anneau vert, orange ou rouge. Une ligne de statut au-dessus dit « Tout est bon. » ou prévient quand le contexte est presque plein, que le cache expire ou a expiré, ou qu'une limite approche (avec l'heure de remise à zéro pour la limite 5 h).
+Each gauge has a green, amber or red ring. A status line above them says "All clear." or warns you when the context is almost full, when the cache is about to expire or has expired, or when a usage limit is close (with the reset time for the 5-hour limit).
 
-## Installation
+## Install
 
-Dans une session Claude Code, à l'invite :
+In a Claude Code session, at the prompt:
 
 ```
 /plugin install token-optimizer --marketplace mariushub/token-optimizer
 ```
 
-Réponds `y` pour ajouter la marketplace, puis choisis la portée (toi seul, ou le projet).
+Answer `y` to add the marketplace, then pick a scope (just you, or the project).
 
-Depuis un terminal :
+From a shell:
 
 ```bash
 claude plugin install token-optimizer --marketplace mariushub/token-optimizer
 ```
 
-## Réglage
+## Settings
 
-La durée du cache est fixée à 60 minutes, celle des abonnements Claude. Si tes requêtes passent au cache de 5 minutes (dépassement de forfait, clé API), change `CACHE_TTL_MIN` en haut de `hooks/register.tsx`.
+The cache lifetime is set to 60 minutes, the one Claude subscriptions use. If your requests use the 5-minute cache (usage overage, API key), change `CACHE_TTL_MIN` at the top of `hooks/register.tsx`.
 
 ## Tests
 
@@ -38,6 +38,6 @@ La durée du cache est fixée à 60 minutes, celle des abonnements Claude. Si te
 claude plugin test .
 ```
 
-## Licence
+## License
 
 MIT

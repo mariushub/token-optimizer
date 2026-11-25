@@ -3,10 +3,10 @@ import type { Register } from 'claude-code'
 
 import type { LastTurn } from '../types'
 
-// Durée de vie du cache de prompt, en minutes : 60 sur un abonnement Claude.
-// Mets 5 si tes requêtes passent au cache de 5 minutes (dépassement de forfait, API).
+// Prompt cache lifetime, in minutes: 60 on a Claude subscription.
+// Set it to 5 if your requests use the 5-minute cache (usage overage, API key).
 const CACHE_TTL_MIN = 60
-// Fréquence de rafraîchissement du compte à rebours du cache.
+// How often the cache countdown refreshes.
 const TICK_MS = 30_000
 
 const lastTurn = atom(
@@ -33,12 +33,12 @@ type Gauge = {
   id: string
   value: string
   label: string
-  // Remplissage de l'anneau, 0 à 100 ; null quand on n'a pas encore de mesure.
+  // How full the ring is, 0 to 100; null while there is no reading yet.
   fill: number | null
   level: Level
 }
 
-// Plus c'est haut, mieux c'est (qualité) ou plus c'est bas, mieux c'est (le reste).
+// Higher is better (quality), or lower is better (everything else).
 const higherIsBetter = (v: number, ok: number, warn: number): Level =>
   v >= ok ? 'ok' : v >= warn ? 'warn' : 'bad'
 const lowerIsBetter = (v: number, ok: number, warn: number): Level =>
@@ -58,7 +58,7 @@ export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     const now = await $.clock.now()
     await update($, tick, () => now)
-    // Redessine la barre régulièrement pour faire avancer le compte à rebours du cache.
+    // Redraw the band on a timer so the cache countdown moves.
     $.clock.every(TICK_MS, () => {
       void $.clock.now().then(t => update($, tick, () => t))
     })
@@ -66,7 +66,7 @@ export const register: Register = on => {
     return next(e)
   })
 
-  // À la fin de chaque tour du fil principal : part du cache et heure de la dernière réponse.
+  // After each main-thread turn: the cache hit rate and when the last response came.
   on('turn.complete', async ($, e, next) => {
     const result = await next(e)
 
@@ -85,7 +85,7 @@ export const register: Register = on => {
     return result
   })
 
-  // Le contexte ou les limites ont bougé : on redessine.
+  // The context or a rate limit moved: redraw.
   on('session.measure', async ($, e, next) => {
     const now = await $.clock.now()
     await update($, tick, () => now)
@@ -109,7 +109,7 @@ export const register: Register = on => {
     const week =
       usage.rateLimits.find(r => r.kind === 'seven_day')?.percentUsed ?? null
 
-    // Temps avant la remise à zéro de la fenêtre de 5 h, ex. « 2h14 » ou « 38 min ».
+    // Time until the 5-hour window resets, e.g. "2h 14m" or "38m".
     const resetMs = fiveHourLimit?.resetsAt
       ? Date.parse(fiveHourLimit.resetsAt) - now
       : NaN
@@ -117,11 +117,11 @@ export const register: Register = on => {
       Number.isNaN(resetMs) || resetMs <= 0
         ? null
         : resetMs >= 3_600_000
-          ? `${Math.floor(resetMs / 3_600_000)}h${String(Math.floor((resetMs % 3_600_000) / 60_000)).padStart(2, '0')}`
-          : `${Math.ceil(resetMs / 60_000)} min`
+          ? `${Math.floor(resetMs / 3_600_000)}h ${Math.floor((resetMs % 3_600_000) / 60_000)}m`
+          : `${Math.ceil(resetMs / 60_000)}m`
 
-    // Cache : plein pendant qu'un tour tourne (chaque requête le rafraîchit),
-    // sinon le temps restant depuis la dernière réponse.
+    // Cache: full while a turn runs (every request refreshes it),
+    // otherwise the time left since the last response.
     const ttlMs = CACHE_TTL_MIN * 60_000
     const cacheLeftMs = e.props.isWorking
       ? ttlMs
@@ -130,7 +130,7 @@ export const register: Register = on => {
         : Math.max(0, ttlMs - (now - turn.at))
     const cacheMin = cacheLeftMs === null ? null : Math.ceil(cacheLeftMs / 60_000)
 
-    // Qualité : moitié efficacité du cache au dernier tour, moitié place libre dans le contexte.
+    // Quality: half the last turn's cache hit rate, half the free room in the context.
     const quality =
       turn?.cacheHit == null || ctx === null
         ? null
@@ -140,20 +140,20 @@ export const register: Register = on => {
       {
         id: 'quality',
         value: quality === null ? '—' : String(quality),
-        label: 'qualité',
+        label: 'quality',
         fill: quality,
         level: quality === null ? 'ok' : higherIsBetter(quality, 70, 40),
       },
       {
         id: 'context',
         value: ctx === null ? '—' : `${ctx}%`,
-        label: 'contexte',
+        label: 'context',
         fill: ctx,
         level: ctx === null ? 'ok' : lowerIsBetter(ctx, 60, 80),
       },
       {
         id: 'cache',
-        value: cacheMin === null ? '—' : cacheMin === 0 ? 'expiré' : `${cacheMin}m`,
+        value: cacheMin === null ? '—' : cacheMin === 0 ? 'expired' : `${cacheMin}m`,
         label: 'cache',
         fill: cacheLeftMs === null ? null : (cacheLeftMs / ttlMs) * 100,
         level:
@@ -169,7 +169,7 @@ export const register: Register = on => {
       {
         id: 'week',
         value: week === null ? '—' : `${Math.round(week)}%`,
-        label: 'semaine',
+        label: 'week',
         fill: week,
         level: week === null ? 'ok' : lowerIsBetter(week, 60, 85),
       },
@@ -177,21 +177,21 @@ export const register: Register = on => {
 
     const status: { level: Level; text: string } =
       ctx !== null && ctx >= 80
-        ? { level: 'bad', text: 'Contexte presque plein : lance /compact ou une nouvelle session.' }
+        ? { level: 'bad', text: 'Context almost full: run /compact or start a new session.' }
         : cacheMin === 0
-          ? { level: 'warn', text: 'Cache expiré : le prochain message renverra tout le contexte au prix fort.' }
+          ? { level: 'warn', text: 'Cache expired: your next message re-sends the whole context at full price.' }
           : cacheMin !== null && cacheMin <= 5
-            ? { level: 'warn', text: `Le cache expire dans ${cacheMin} min.` }
+            ? { level: 'warn', text: `Cache expires in ${cacheMin}m.` }
             : fiveHour !== null && fiveHour >= 85
               ? {
                   level: fiveHour >= 95 ? 'bad' : 'warn',
-                  text: `Limite 5h à ${Math.round(fiveHour)} %${fiveHourReset ? `, remise à zéro dans ${fiveHourReset}` : ''}.`,
+                  text: `5h limit at ${Math.round(fiveHour)}%${fiveHourReset ? `, resets in ${fiveHourReset}` : ''}.`,
                 }
               : week !== null && week >= 85
-              ? { level: 'warn', text: `Limite hebdo à ${Math.round(week)} %.` }
-              : turn?.cacheHit != null && turn.cacheHit < 50
-                ? { level: 'warn', text: 'Peu de cache au dernier tour : le contexte a été réécrit.' }
-                : { level: 'ok', text: 'Tout est bon.' }
+                ? { level: 'warn', text: `Weekly limit at ${Math.round(week)}%.` }
+                : turn?.cacheHit != null && turn.cacheHit < 50
+                  ? { level: 'warn', text: 'Low cache use last turn: the context was written again.' }
+                  : { level: 'ok', text: 'All clear.' }
 
     const table = $.ui.resolve(e)
     const { Box, Text } = table
